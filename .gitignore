@@ -3,3 +3,5 @@ build
 Move.lock
 .DS_Store*
 .vscode
+AGENTS.md
+.gemini
