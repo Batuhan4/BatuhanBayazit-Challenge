@@ -1,6 +1,7 @@
 module challenge::hero;
 
 use std::string::String;
+use sui::event;
 // ========= STRUCTS =========
 public struct Hero has key, store {
     id: sui::object::UID,
@@ -11,6 +12,13 @@ public struct Hero has key, store {
 
 public struct HeroMetadata has key, store {
     id: sui::object::UID,
+    timestamp: u64,
+}
+
+// ========= EVENTS =========
+
+public struct HeroCreated has copy, drop {
+    hero_id: sui::object::ID,
     timestamp: u64,
 }
 
@@ -29,6 +37,7 @@ public fun create_hero(
         image_url,
         power,
     };
+    let hero_id = sui::object::id(&hero);
     sui::transfer::transfer(hero, ctx.sender());
 
     let metadata = HeroMetadata {
@@ -36,6 +45,8 @@ public fun create_hero(
         timestamp: ctx.epoch_timestamp_ms(),
     };
     sui::transfer::freeze_object(metadata);
+
+    event::emit(HeroCreated { hero_id, timestamp: ctx.epoch_timestamp_ms() });
 }
 
 // ========= GETTER FUNCTIONS =========

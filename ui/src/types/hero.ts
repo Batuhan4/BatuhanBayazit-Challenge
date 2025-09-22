@@ -33,6 +33,22 @@ export interface HeroBoughtEvent {
   timestamp: string;
 }
 
+export interface HeroDelistedEvent {
+  id: string;
+  seller: string;
+}
+
+export interface HeroPriceChangedEvent {
+  id: string;
+  old_price: string;
+  new_price: string;
+}
+
+export interface HeroCreatedEvent {
+  id: string;
+  timestamp: string;
+}
+
 export interface Arena {
   uid: { id: string };
   warrior: { fields: Hero };

@@ -40,6 +40,18 @@ public struct HeroBought has copy, drop {
     timestamp: u64,
 }
 
+// Additional marketplace lifecycle events
+public struct HeroDelisted has copy, drop {
+    list_hero_id: sui::object::ID,
+    seller: address,
+}
+
+public struct HeroPriceChanged has copy, drop {
+    list_hero_id: sui::object::ID,
+    old_price: u64,
+    new_price: u64,
+}
+
 // ========= FUNCTIONS =========
 
 fun init(ctx: &mut sui::tx_context::TxContext) {
@@ -96,12 +108,26 @@ public fun buy_hero(
 public fun delist(_: &AdminCap, list_hero: ListHero) {
     let ListHero { id, nft, price: _, seller } = list_hero;
 
+    // Emit delist event before deleting the ID
+    event::emit(HeroDelisted {
+        list_hero_id: sui::object::uid_to_inner(&id),
+        seller,
+    });
+
     sui::transfer::public_transfer(nft, seller);
     sui::object::delete(id);
 }
 
 public fun change_the_price(_: &AdminCap, list_hero: &mut ListHero, new_price: u64) {
+    let old_price = list_hero.price;
     list_hero.price = new_price;
+
+    // Emit price change event
+    event::emit(HeroPriceChanged {
+        list_hero_id: sui::object::id(list_hero),
+        old_price,
+        new_price,
+    });
 }
 
 // ========= GETTER FUNCTIONS =========
