@@ -11,6 +11,18 @@ export default function EventsHistory() {
         method: "queryEvents",
         params: {
           query: {
+            MoveEventType: `${packageId}::hero::HeroCreated`,
+          },
+          limit: 20,
+          order: "descending",
+        },
+        queryKey: ["queryEvents", packageId, "HeroCreated"],
+        enabled: !!packageId,
+      },
+      {
+        method: "queryEvents",
+        params: {
+          query: {
             MoveEventType: `${packageId}::marketplace::HeroListed`,
           },
           limit: 20,
@@ -29,6 +41,30 @@ export default function EventsHistory() {
           order: "descending",
         },
         queryKey: ["queryEvents", packageId, "HeroBought"],
+        enabled: !!packageId,
+      },
+      {
+        method: "queryEvents",
+        params: {
+          query: {
+            MoveEventType: `${packageId}::marketplace::HeroDelisted`,
+          },
+          limit: 20,
+          order: "descending",
+        },
+        queryKey: ["queryEvents", packageId, "HeroDelisted"],
+        enabled: !!packageId,
+      },
+      {
+        method: "queryEvents",
+        params: {
+          query: {
+            MoveEventType: `${packageId}::marketplace::HeroPriceChanged`,
+          },
+          limit: 20,
+          order: "descending",
+        },
+        queryKey: ["queryEvents", packageId, "HeroPriceChanged"],
         enabled: !!packageId,
       },
       {
@@ -59,8 +95,11 @@ export default function EventsHistory() {
   });
 
   const [
+    { data: heroCreatedEvents, isPending: isHeroCreatedPending },
     { data: listedEvents, isPending: isListedPending },
     { data: boughtEvents, isPending: isBoughtPending },
+    { data: delistedEvents, isPending: isDelistedPending },
+    { data: priceChangedEvents, isPending: isPriceChangedPending },
     { data: battleCreatedEvents, isPending: isBattleCreatedPending },
     { data: battleCompletedEvents, isPending: isBattleCompletedPending },
   ] = eventQueries;
@@ -78,8 +117,11 @@ export default function EventsHistory() {
   };
 
   if (
+    isHeroCreatedPending ||
     isListedPending ||
     isBoughtPending ||
+    isDelistedPending ||
+    isPriceChangedPending ||
     isBattleCreatedPending ||
     isBattleCompletedPending
   ) {
@@ -91,6 +133,10 @@ export default function EventsHistory() {
   }
 
   const allEvents = [
+    ...(heroCreatedEvents?.data || []).map((event) => ({
+      ...event,
+      type: "hero_created" as const,
+    })),
     ...(listedEvents?.data || []).map((event) => ({
       ...event,
       type: "listed" as const,
@@ -98,6 +144,14 @@ export default function EventsHistory() {
     ...(boughtEvents?.data || []).map((event) => ({
       ...event,
       type: "bought" as const,
+    })),
+    ...(delistedEvents?.data || []).map((event) => ({
+      ...event,
+      type: "delisted" as const,
+    })),
+    ...(priceChangedEvents?.data || []).map((event) => ({
+      ...event,
+      type: "price_changed" as const,
     })),
     ...(battleCreatedEvents?.data || []).map((event) => ({
       ...event,
@@ -131,23 +185,35 @@ export default function EventsHistory() {
                   <Flex align="center" gap="3">
                     <Badge
                       color={
-                        event.type === "listed"
+                        event.type === "hero_created"
                           ? "blue"
+                          : event.type === "listed"
+                            ? "blue"
                           : event.type === "bought"
                             ? "green"
-                            : event.type === "battle_created"
-                              ? "orange"
-                              : "red"
+                            : event.type === "delisted"
+                              ? "gray"
+                              : event.type === "price_changed"
+                                ? "purple"
+                                : event.type === "battle_created"
+                                  ? "orange"
+                                  : "red"
                       }
                       size="2"
                     >
-                      {event.type === "listed"
-                        ? "Hero Listed"
+                      {event.type === "hero_created"
+                        ? "Hero Created"
+                        : event.type === "listed"
+                          ? "Hero Listed"
                         : event.type === "bought"
                           ? "Hero Bought"
-                          : event.type === "battle_created"
-                            ? "Arena Created"
-                            : "Battle Completed"}
+                          : event.type === "delisted"
+                            ? "Hero Delisted"
+                            : event.type === "price_changed"
+                              ? "Price Changed"
+                              : event.type === "battle_created"
+                                ? "Arena Created"
+                                : "Battle Completed"}
                     </Badge>
                     <Text size="3" color="gray">
                       {formatTimestamp(event.timestampMs!)}
@@ -155,6 +221,21 @@ export default function EventsHistory() {
                   </Flex>
 
                   <Flex align="center" gap="4" wrap="wrap">
+                    {event.type === "hero_created" && (
+                      <>
+                        <Text size="3">
+                          <strong>Hero created</strong>
+                        </Text>
+                        <Text
+                          size="3"
+                          color="gray"
+                          style={{ fontFamily: "monospace" }}
+                        >
+                          ID: {eventData.hero_id?.slice(0, 8)}...
+                        </Text>
+                      </>
+                    )}
+
                     {(event.type === "listed" || event.type === "bought") && (
                       <>
                         <Text size="3">
@@ -180,6 +261,39 @@ export default function EventsHistory() {
                           </Flex>
                         )}
 
+                        <Text
+                          size="3"
+                          color="gray"
+                          style={{ fontFamily: "monospace" }}
+                        >
+                          ID: {eventData.list_hero_id.slice(0, 8)}...
+                        </Text>
+                      </>
+                    )}
+
+                    {event.type === "delisted" && (
+                      <>
+                        <Text size="3">
+                          <strong>Seller:</strong> {formatAddress(eventData.seller)}
+                        </Text>
+                        <Text
+                          size="3"
+                          color="gray"
+                          style={{ fontFamily: "monospace" }}
+                        >
+                          ID: {eventData.list_hero_id.slice(0, 8)}...
+                        </Text>
+                      </>
+                    )}
+
+                    {event.type === "price_changed" && (
+                      <>
+                        <Text size="3">
+                          <strong>Old Price:</strong> {formatPrice(eventData.old_price)} SUI
+                        </Text>
+                        <Text size="3">
+                          <strong>New Price:</strong> {formatPrice(eventData.new_price)} SUI
+                        </Text>
                         <Text
                           size="3"
                           color="gray"
